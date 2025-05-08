@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A-Eye: Image Captioning</title>
+    <!-- Add Sora font from Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@100;200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Import React, ReactDOM, and Three.js -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/three@0.149.0/build/three.min.js" crossorigin></script>
+    
+    <!-- Import ShaderGradient -->
+    <script src="https://unpkg.com/@shadergradient/react@2.0.25/dist/without-store.umd.js" crossorigin></script>
+    
+    <!-- Import map for ESM modules -->
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://unpkg.com/react@18/umd/react.production.min.js",
+        "react-dom": "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js",
+        "react-dom/client": "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js",
+        "three": "https://unpkg.com/three@0.149.0/build/three.module.js",
+        "@react-three/fiber": "https://unpkg.com/@react-three/fiber@8.13.0/dist/index.mjs",
+        "@react-spring/three": "https://unpkg.com/@react-spring/three@9.7.3/dist/index.mjs",
+        "@shadergradient/react": "https://unpkg.com/@shadergradient/react@2.0.25/dist/without-store.mjs"
+      }
+    }
+    </script>
+</head>
+<body>
+    <!-- Gradient Root Element -->
+    <div id="gradient-root" style="position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: -1;"></div>
+    
+    <!-- Drag and drop overlay -->
+    <div id="drag-overlay" class="drag-overlay">
+        <div class="drag-message">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <span>Drop your image here</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='logo/aeye.gif') }}" alt="A-Eye Logo" class="logo-image">
+            </div>
+            <h1>A-Eye</h1>
+            <h2>Image Captioning</h2>
+        </header>
+        
+        <main class="glass-morphism">
+            <div class="upload-container">
+                <form id="upload-form" enctype="multipart/form-data">
+                    <div class="file-input-container">
+                        <input type="file" id="file-input" name="file" accept="image/*" class="file-input">
+                        <label for="file-input" class="file-input-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Choose an image</span>
+                        </label>
+                    </div>
+                    <button type="submit" id="upload-button" disabled>Upload & Generate Caption</button>
+                </form>
+                
+                <!-- Webcam Controls -->
+                <div class="webcam-controls">
+                    <button id="webcam-button" class="webcam-button">
+                        <i class="fas fa-video"></i> Start Camera
+                    </button>
+                    <div class="camera-select-container">
+                        <select id="camera-select" disabled>
+                            <option value="">Loading cameras...</option>
+                        </select>
+                        <i class="fas fa-caret-down"></i>
+                    </div>
+                </div>
+                
+                <!-- Webcam Container -->
+                <div id="webcam-container" class="webcam-container">
+                    <video id="webcam-video" autoplay playsinline></video>
+                    <canvas id="webcam-canvas" style="display: none;"></canvas>
+                    <div class="webcam-buttons">
+                        <button id="webcam-capture" disabled>
+                            <i class="fas fa-camera"></i> Take Photo
+                        </button>
+                        <button id="live-captioning-toggle" disabled>
+                            <i class="fas fa-sync"></i> Enable Live Captioning
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="progress-container" id="progress-container" style="display: none;">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+            </div>
+            
+            <div class="result-container" id="result-container">
+                <div class="image-preview">
+                    <div class="loader" id="loader" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Generating caption...</p>
+                    </div>
+                    <img id="preview-image" src="#" alt="Preview" style="display: none;">
+                </div>
+                
+                <div class="caption-container">
+                    <h3>Generated Caption</h3>
+                    <div class="caption-box">
+                        <p id="caption-text">Your caption will appear here...</p>
+                    </div>
+                    
+                    <!-- Audio Controls -->
+                    <div class="audio-controls" id="audio-controls" style="display: none;">
+                        <div class="audio-buttons">
+                            <button id="play-button" class="audio-btn" title="Play">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button id="replay-button" class="audio-btn" title="Replay">
+                                <i class="fas fa-redo-alt"></i>
+                            </button>
+                            <button id="mute-button" class="audio-btn" title="Mute">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                        </div>
+                        <div class="audio-progress">
+                            <div class="progress-track">
+                                <div class="progress-fill" id="audio-progress-fill"></div>
+                            </div>
+                            <span id="audio-time">0:00</span>
+                        </div>
+                        <!-- Hidden audio element -->
+                        <audio id="caption-audio" style="display: none;"></audio>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>© 2025 A-Eye Image Captioning</p>
+        </footer>
+    </div>
+
+    <!-- Custom Scripts -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/gradient.js') }}" type="module"></script>
+    
+    <!-- Drag and Drop Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const body = document.body;
+            const dragOverlay = document.getElementById('drag-overlay');
+            const fileInput = document.getElementById('file-input');
+            
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                body.addEventListener(eventName, preventDefaults, false);
+                dragOverlay.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            // Handle drag enter/over
+            ['dragenter', 'dragover'].forEach(eventName => {
+                body.addEventListener(eventName, showOverlay, false);
+            });
+            
+            // Handle drag leave/drop
+            ['dragleave', 'drop'].forEach(eventName => {
+                dragOverlay.addEventListener(eventName, hideOverlay, false);
+            });
+            
+            // Handle drop event
+            dragOverlay.addEventListener('drop', handleDrop, false);
+            
+            function showOverlay() {
+                dragOverlay.classList.add('active');
+            }
+            
+            function hideOverlay() {
+                dragOverlay.classList.remove('active');
+            }
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length) {
+                    fileInput.files = files;
+                    // Trigger change event to update UI
+                    const event = new Event('change');
+                    fileInput.dispatchEvent(event);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
