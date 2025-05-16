@@ -56,8 +56,7 @@
         </header>
         
         <main class="glass-morphism">
-            <div class="upload-container">
-                <form id="upload-form" enctype="multipart/form-data">
+            <div class="upload-container">                <form id="upload-form" enctype="multipart/form-data">
                     <div class="file-input-container">
                         <input type="file" id="file-input" name="file" accept="image/*" class="file-input">
                         <label for="file-input" class="file-input-label">
@@ -65,6 +64,24 @@
                             <span>Choose an image</span>
                         </label>
                     </div>
+                    
+                    <div class="model-options">
+                        <div class="model-selection">
+                            <label for="model-select">Model:</label>
+                            <select id="model-select" name="model_type">
+                                <option value="base">v1.0</option>
+                                <option value="finetuned">v2.0</option>
+                            </select>
+                        </div>
+                        
+                        <div class="compare-mode-toggle">
+                            <label for="compare-mode">
+                                <input type="checkbox" id="compare-mode" name="compare_mode">
+                                <span>Compare Models</span>
+                            </label>
+                        </div>
+                    </div>
+                    
                     <button type="submit" id="upload-button" disabled>Upload & Generate Caption</button>
                 </form>
                 
@@ -108,11 +125,30 @@
                     </div>
                     <img id="preview-image" src="#" alt="Preview" style="display: none;">
                 </div>
-                
-                <div class="caption-container">
-                    <h3>Generated Caption</h3>
-                    <div class="caption-box">
-                        <p id="caption-text">Your caption will appear here...</p>
+                  <div class="caption-container">
+                    <!-- Single Caption Display (Default) -->
+                    <div id="single-caption-display">
+                        <h3>Generated Caption</h3>
+                        <div class="caption-box">
+                            <p id="caption-text">Your caption will appear here...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Comparison Display (Hidden by default) -->                    <div id="comparison-display" style="display: none;">
+                        <div class="caption-comparison">
+                            <div class="caption-column">
+                                <h3>v1.0</h3>
+                                <div class="caption-box">
+                                    <p id="base-caption-text">Base caption will appear here...</p>
+                                </div>
+                            </div>
+                            <div class="caption-column">
+                                <h3>v2.0</h3>
+                                <div class="caption-box">
+                                    <p id="finetuned-caption-text">Finetuned caption will appear here...</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Audio Controls -->
